@@ -1,0 +1,42 @@
+[
+  {
+    "id": "doc_001",
+    "content": "Ransomware groups like LockBit 3.0 increasingly utilize double extortion tactics. They not only encrypt local files but also exfiltrate sensitive data to leak sites, demanding payment to prevent public release. Attack vectors often involve compromised RDP credentials or phishing emails with malicious macros.",
+    "category": "ransomware",
+    "severity": "critical",
+    "source": "CISA Alert AA23-075A",
+    "date": "2023-03-16"
+  },
+  {
+    "id": "doc_002",
+    "content": "APT29 (Cozy Bear) has been observed using stealthy lateral movement techniques. After initial compromise via spear-phishing, they establish persistence using scheduled tasks and WMI. They frequently use pass-the-ticket (PtT) and Golden Ticket attacks to move laterally across Active Directory environments without logging interactive logon events.",
+    "category": "apt",
+    "severity": "high",
+    "source": "FireEye Threat Research",
+    "date": "2022-11-04"
+  },
+  {
+    "id": "doc_003",
+    "content": "CVE-2023-34362 (MOVEit Transfer SQL Injection). A critical vulnerability allows unauthenticated, remote attackers to access to the MOVEit Transfer database. Threat actors, notably the cl0p ransomware gang, exploited this zero-day to steal data from hundreds of organizations globally by deploying a custom web shell (LEMURLOOT).",
+    "category": "vulnerability",
+    "severity": "critical",
+    "source": "NVD",
+    "date": "2023-06-02"
+  },
+  {
+    "id": "doc_004",
+    "content": "Supply chain attacks are on the rise, primarily targeting npm and PyPI ecosystems. Malicious actors publish typosquatted packages or compromise maintainer accounts to deploy infostealers. The malicious code is often obfuscated and executes during the package installation phase (e.g., in setup.py or preinstall scripts) to harvest environment variables and SSH keys.",
+    "category": "supply_chain",
+    "severity": "high",
+    "source": "Snyk Security Report",
+    "date": "2024-01-15"
+  },
+  {
+    "id": "doc_005",
+    "content": "Living off the Land (LotL) techniques involve using legitimate system tools for malicious purposes. Attackers frequently use PowerShell, certutil, and bitsadmin to download payloads, bypassing traditional antivirus detections that look for known malicious binaries. This makes behavioral analysis essential for modern EDR solutions.",
+    "category": "evasion",
+    "severity": "medium",
+    "source": "CrowdStrike Blog",
+    "date": "2023-09-22"
+  }
+]

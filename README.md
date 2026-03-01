@@ -1,0 +1,161 @@
+# ThreatLens: AI-Powered Threat Intelligence Assistant
+
+<p align="center">
+  <em>An advanced Retrieval-Augmented Generation (RAG) system built on the Endee Vector Database.</em>
+</p>
+
+---
+
+## 🎯 Project Overview
+ThreatLens is a production-ready Threat Intelligence Assistant designed to parse, index, and query cybersecurity threat intelligence reports. By leveraging the **Endee Vector Database**, ThreatLens embeds threat documents using dense vector representations, enabling high-precision semantic search over unstructured security data. The retrieved context is then synthesized by an LLM to generate highly contextual, accurate, and actionable intelligence for security analysts.
+
+### ✨ Advanced Features Implemented
+- **Metadata Filtering Support**: Native filtering based on threat category and severity natively supported by Endee API.
+- **Precision@k Evaluation**: Built-in metric evaluation for retrieval effectiveness in `retrieval.py`.
+- **Latency Measurement Logging**: Application-level middleware for request benchmarking.
+- **Streaming LLM Responses**: Real-time generation streams via Server-Sent Events (SSE) preventing UI blocking on large answers.
+- **Configurable Top-K limits**: Intelligent default configurations protecting LLM Context blowing up.
+
+---
+
+## 🛑 Problem Statement
+Cybersecurity teams are overwhelmed by the sheer volume of unstructured threat intelligence reports (e.g., CISA alerts, zero-day write-ups, APT campaigns). Traditional keyword search tools fail to understand the malicious intent or the semantics of related attack techniques. Security Operations Centers (SOCs) need a way to **ask natural language questions** about their local intel repository and get heavily contextualized, sourced answers instantly. ThreatLens solves this by combining semantic vector retrieval with generative AI.
+
+---
+
+## 🏗️ Architecture Diagram
+
+```mermaid
+graph TD;
+    User((Security Analyst)) -->|POST /query| API(FastAPI Server)
+    
+    subgraph Data Ingestion
+        Data[(threat_data.json)] -->|POST /ingest| Ingest[Ingestion Script]
+        Ingest --> Embed[SentenceTransformer]
+        Embed --> Endee[(Endee Vector DB)]
+    end
+
+    subgraph RAG Pipeline
+        API --> QueryEmbed[SentenceTransformer]
+        QueryEmbed -->|Query Vector + Filters| Endee
+        Endee -->|Search Results| Orchestrator[RAG Orchestrator]
+        Orchestrator -->|Context + Query| LLM{OpenAI gpt-4o}
+        LLM -->|Streamed response| API
+    end
+```
+
+---
+
+## 🧠 Core Engineering Decisions
+
+### 1. How Endee is Used
+Endee serves as the foundational knowledge base for ThreatLens. During the ingestion phase, unstructured JSON threat intel is passed through a SentenceTransformer (`all-MiniLM-L6-v2`) to generate 384-dimensional dense vectors. These vectors are inserted into an Endee index (`threat_intel`) along with crucial metadata (severity, category, source) using its fast C++ backed REST API. During retrieval, the user's natural language query is embedded, and Endee performs a high-speed nearest-neighbor search, applying metadata filters natively to rapidly prune irrelevant reports before evaluating vector proximity.
+
+### 2. Why a Vector Database over a Relational DB?
+Relational databases (SQL) are optimized for structured data and exact-match keyword queries (BM25/Full-text). However, threat intelligence queries are often semantic. A user might search for "financial motivation cyber attacks," while the document explicitly mentions "ransomware cartel." A vector database like Endee evaluates the mathematical distance between meaning representations (embeddings). It finds concepts that are conceptually similar regardless of the exact terminology used, which is critical in an ever-evolving cybersecurity landscape.
+
+### 3. Why Cosine Similarity?
+Cosine similarity measures the angle between two multi-dimensional vectors, ignoring their magnitude. For text embeddings, magnitude generally corresponds to the length of the string, which is highly variable in intel reports. Cosine similarity ensures we are measuring the similarity of the *topic and semantic intent* across the documents, independent of document length, resulting in vastly better context relevance.
+
+### 4. Scalability Discussion (Millions of Vectors)
+If this system scales to **millions of threat vectors**, the architecture remains robust due to Endee's performance optimizations:
+- **Compute Optimization**: By leveraging Endee's custom build flags for `AVX-512` or `NEON` SIMD architectures, distance computation over millions of data points happens via vectorized operations in CPU cache.
+- **Asynchrony**: The current FastAPI architecture handles ingestion via asynchronous BackgroundTasks, preventing blocking calls on the main thread during heavy data ingest.
+
+---
+
+## 🚀 Setup Instructions
+
+### Prerequisites
+- Python 3.11+
+- [Endee Server](https://github.com/endee-io/endee) running locally
+- OpenAI API Key
+
+### 1. Configure the Environment
+Clone the repository and define your environment configuration.
+Copy the configuration template:
+```bash
+cp .env.example .env
+```
+Update `.env` with your OpenAI Key and Endee Auth Tokens.
+
+### 2. Deployment via Docker (Recommended)
+You can deploy the FastAPI application securely in an ephemeral container:
+```bash
+cd docker
+docker build -t threatlens-api .
+docker run -p 8000:8000 --env-file ../.env threatlens-api
+```
+
+### 3. Local Development Run
+If running directly on the host machine:
+```bash
+# 1. Create a virtual environment
+python3 -m venv venv
+source venv/bin/activate
+
+# 2. Install frozen dependecies
+pip install -r requirements.txt
+
+# 3. Start the API server
+uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+```
+
+---
+
+## 🔍 Examples edge usage
+
+### Example 1: Ingest Threat Data
+Initiate a background task to embed the `data/sample_threat_data.json` file into Endee.
+```bash
+curl -X POST http://localhost:8000/ingest
+```
+
+### Example 2: Standard RAG Query
+Query the RAG system for contextual intelligence.
+```bash
+curl -X POST http://localhost:8000/query \
+-H "Content-Type: application/json" \
+-d '{
+  "query": "Summarize lateral movement techniques in APT attacks",
+  "top_k": 3,
+  "stream": false
+}'
+```
+**Example Response Snippet**:
+```json
+{
+  "query": "Summarize lateral movement techniques in APT attacks",
+  "answer": "According to FireEye Threat Research (doc_002), APT29 (Cozy Bear) utilizes stealthy lateral movement techniques such as...",
+  "retrieved_documents": [...],
+  "precision_at_k": 0.33
+}
+```
+
+### Example 3: Metadata Filtered Query + Streaming Response
+Filter down the results strictly to `critical` `ransomware` articles and stream the generative return.
+```bash
+curl -X POST http://localhost:8000/query \
+-H "Content-Type: application/json" \
+-d '{
+  "query": "What are recent ransomware attack patterns?",
+  "top_k": 5,
+  "stream": true,
+  "metadata_filter": "meta.category == \"ransomware\" && meta.severity == \"critical\""
+}'
+```
+
+### Example 4: Healthcheck
+```bash
+curl http://localhost:8000/health
+```
+
+---
+
+## 🔮 Future Improvements
+1. **Hybrid Search Integration**: Implementing hybrid retrieval combining dense vector search (Endee) with sparse keyword search (BM25) for precision on highly specific IoCs (IP addresses, hashes).
+2. **Automated Feed Ingestion**: Connect the `/ingest` pipeline to MISP or STIX/TAXII servers via CRON jobs for live intelligence streaming.
+3. **Graph Vector Integration**: Connect threat actor profiles logically by marrying Endee vectors with a Graph database to trace attack origins visually.
+
+---
+*Built as a production-grade RAG evaluation project on top of Endee.*
