@@ -19,6 +19,8 @@ class Settings(BaseSettings):
 
     # App Config
     DEFAULT_TOP_K: int = Field(default=3, description="Default number of vectors to retrieve")
+    HYBRID_ALPHA: float = Field(default=0.7, description="Weight of the Dense (Semantic) score in Hybrid Retrieval")
+    HYBRID_BETA: float = Field(default=0.3, description="Weight of the Sparse (Keyword) score in Hybrid Retrieval")
     
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
 

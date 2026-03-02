@@ -1,10 +1,10 @@
 import json
 import logging
-import requests
 from typing import List, Dict, Any
-from .embeddings import embedding_service
-from .config import settings
 from tenacity import retry, stop_after_attempt, wait_exponential
+from .embeddings import embedding_service
+from .sparse_index import sparse_index
+from .config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -117,13 +117,16 @@ def ingest_data(file_path: str = "data/sample_threat_data.json"):
         for doc in documents
     ]
 
-    logger.info("Generating embeddings...")
+    logger.info("Generating dense embeddings...")
     vectors = embedding_service.generate_embeddings_batch(texts)
 
     if len(vectors[0]) != settings.EMBEDDING_DIMENSION:
         raise RuntimeError("Embedding dimension mismatch.")
 
-    logger.info("Ensuring index exists...")
+    logger.info("Building sparse BM25 index...")
+    sparse_index.build_and_save(texts, ids)
+
+    logger.info("Ensuring Endee vector index exists...")
     create_index()
 
     logger.info("Inserting vectors...")

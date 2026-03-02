@@ -37,7 +37,8 @@ def main():
             
             print("\n[+] Retrieved Documents:")
             for i, doc in enumerate(data.get("retrieved_documents", [])):
-                print(f"  {i+1}. ID: {doc.get('id', 'N/A')} | Score: {doc.get('score', 0):.4f}")
+                f_score = doc.get("final_score", doc.get("score", 0))
+                print(f"  {i+1}. ID: {doc.get('id', 'N/A')} | Hybrid Score: {f_score:.4f} (Dense: {doc.get('dense_score', 0):.2f}, Sparse: {doc.get('bm25_score', 0):.2f})")
                 
             print("\n[+] LLM Answer:")
             print("-" * 50)

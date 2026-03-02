@@ -1,5 +1,5 @@
 from fastapi import FastAPI, HTTPException, BackgroundTasks, Request
-from fastapi.responses import StreamingResponse
+from fastapi.responses import StreamingResponse, RedirectResponse
 from pydantic import BaseModel, Field
 from typing import List, Dict, Any, Optional
 import time
@@ -44,6 +44,11 @@ class QueryResponse(BaseModel):
     answer: str
     retrieved_documents: List[Dict[str, Any]]
     precision_at_k_example: Optional[float] = None
+
+@app.get("/")
+async def root():
+    """Redirects to the Swagger UI."""
+    return RedirectResponse(url="/docs")
 
 @app.get("/health")
 async def health_check():

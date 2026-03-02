@@ -11,10 +11,11 @@ ThreatLens is a production-ready Threat Intelligence Assistant designed to parse
 
 ### ✨ Advanced Features Implemented
 - **Metadata Filtering Support**: Native filtering based on threat category and severity natively supported by Endee API.
+- **Hybrid Search Architecture**: Natively merges Semantic dense vectors with Sparse keyword matching (BM25) via configurable alpha/beta min-max normalization.
 - **Precision@k Evaluation**: Built-in metric evaluation for retrieval effectiveness in `retrieval.py`.
 - **Latency Measurement Logging**: Application-level middleware for request benchmarking.
 - **Streaming LLM Responses**: Real-time generation streams via Server-Sent Events (SSE) preventing UI blocking on large answers.
-- **Configurable Top-K limits**: Intelligent default configurations protecting LLM Context blowing up.
+- **Configurable Top-K & Token limits**: Intelligent default configurations protecting LLM Context blowing up.
 
 ---
 
@@ -57,7 +58,13 @@ Relational databases (SQL) are optimized for structured data and exact-match key
 ### 3. Why Cosine Similarity?
 Cosine similarity measures the angle between two multi-dimensional vectors, ignoring their magnitude. For text embeddings, magnitude generally corresponds to the length of the string, which is highly variable in intel reports. Cosine similarity ensures we are measuring the similarity of the *topic and semantic intent* across the documents, independent of document length, resulting in vastly better context relevance.
 
-### 4. Scalability Discussion (Millions of Vectors)
+### 4. Why We Need Hybrid Retrieval
+Pure vector search is incredible for conceptual similarity, but it routinely struggles with **exact keyword matching**—especially for highly specific technical identifiers like IP addresses, CVE serial numbers (`CVE-2021-44228`), or threat actor aliases.
+ThreatLens implements **Hybrid Retrieval** by maintaining a local `rank-bm25` sparse index alongside the Endee Dense index. During a query, both indexes retrieve candidates. Their scores are independently normalized (Min-Max) to a `0.0 - 1.0` scale and algebraically fused:
+`Final Score = (α * Dense Score) + (β * Sparse Score)`
+This allows the system to seamlessly understand *conceptual similarities* while still enforcing *hard keyword boundaries*, ensuring the LLM is fed the most precise threat intelligence possible. You can tune these weights in `app/config.py`.
+
+### 5. Scalability Discussion (Millions of Vectors)
 If this system scales to **millions of threat vectors**, the architecture remains robust due to Endee's performance optimizations:
 - **Compute Optimization**: By leveraging Endee's custom build flags for `AVX-512` or `NEON` SIMD architectures, distance computation over millions of data points happens via vectorized operations in CPU cache.
 - **Asynchrony**: The current FastAPI architecture handles ingestion via asynchronous BackgroundTasks, preventing blocking calls on the main thread during heavy data ingest.
@@ -127,7 +134,14 @@ curl -X POST http://localhost:8000/query \
 {
   "query": "Summarize lateral movement techniques in APT attacks",
   "answer": "According to FireEye Threat Research (doc_002), APT29 (Cozy Bear) utilizes stealthy lateral movement techniques such as...",
-  "retrieved_documents": [...],
+  "retrieved_documents": [
+    {
+      "id": "doc_002",
+      "dense_score": 0.98,
+      "bm25_score": 0.45,
+      "final_score": 0.82
+    }
+  ],
   "precision_at_k": 0.33
 }
 ```
@@ -153,9 +167,8 @@ curl http://localhost:8000/health
 ---
 
 ## 🔮 Future Improvements
-1. **Hybrid Search Integration**: Implementing hybrid retrieval combining dense vector search (Endee) with sparse keyword search (BM25) for precision on highly specific IoCs (IP addresses, hashes).
-2. **Automated Feed Ingestion**: Connect the `/ingest` pipeline to MISP or STIX/TAXII servers via CRON jobs for live intelligence streaming.
-3. **Graph Vector Integration**: Connect threat actor profiles logically by marrying Endee vectors with a Graph database to trace attack origins visually.
+1. **Automated Feed Ingestion**: Connect the `/ingest` pipeline to MISP or STIX/TAXII servers via CRON jobs for live intelligence streaming.
+2. **Graph Vector Integration**: Connect threat actor profiles logically by marrying Endee vectors with a Graph database to trace attack origins visually.
 
 ---
 *Built as a production-grade RAG evaluation project on top of Endee.*
