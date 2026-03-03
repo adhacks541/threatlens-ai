@@ -7,3 +7,4 @@ __pycache__/
 *.log
 docker/data/
 data/*.pkl
+project_notes.txt

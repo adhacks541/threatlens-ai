@@ -164,6 +164,34 @@ curl -X POST http://localhost:8000/query \
 curl http://localhost:8000/health
 ```
 
+### Example 5: Hybrid Retrieval for Specific CVEs
+Hybrid search shines when you need exact keyword matches alongside semantics. Querying a specific CVE instantly weights the BM25 sparse index heavily.
+```bash
+curl -X POST http://localhost:8000/query \
+-H "Content-Type: application/json" \
+-d '{
+  "query": "CVE-2021-44228 Log4Shell vulnerabilities",
+  "top_k": 3,
+  "stream": false
+}'
+```
+**Example Response Snippet**:
+```json
+{
+  "query": "CVE-2021-44228 Log4Shell vulnerabilities",
+  "answer": "CVE-2021-44228, commonly known as Log4Shell, is a critical vulnerability in the Apache Log4j library...",
+  "retrieved_documents": [
+    {
+      "id": "doc_003",
+      "dense_score": 0.52,
+      "bm25_score": 0.99,
+      "final_score": 0.66
+    }
+  ],
+  "precision_at_k": 1.0
+}
+```
+
 ---
 
 ## 🔮 Future Improvements
