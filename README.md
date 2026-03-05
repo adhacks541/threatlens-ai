@@ -47,6 +47,32 @@ graph TD;
 
 ---
 
+## 📁 Project Structure
+
+```
+threatlens-ai/
+├── app/
+│   ├── main.py          → FastAPI app: routes /query, /ingest, /health
+│   ├── config.py        → Pydantic settings loaded from .env
+│   ├── ingestion.py     → Parses JSON, embeds documents, upserts into Endee + BM25
+│   ├── embeddings.py    → SentenceTransformer wrapper with lru_cache
+│   ├── retrieval.py     → Hybrid search: dense (Endee) + sparse (BM25) fusion
+│   ├── sparse_index.py  → BM25 index manager: build / save / load / search
+│   └── rag.py           → Formats context, calls GPT-4o with token budgeting
+├── data/
+│   └── sample_threat_data.json  → Seed threat intelligence documents
+├── scripts/
+│   ├── demo_query.py    → CLI tool to send queries and print results
+│   └── eval_hybrid.py   → Evaluates Dense-only vs Hybrid Precision@k
+├── tests/
+│   └── test_api.py      → pytest test suite for key API endpoints
+├── .env.example         → Configuration template
+├── requirements.txt     → All Python dependencies (pinned)
+└── README.md            → Public-facing documentation
+```
+
+---
+
 ## 🧠 Core Engineering Decisions
 
 ### 1. How Endee is Used
@@ -101,7 +127,7 @@ If running directly on the host machine:
 python3 -m venv venv
 source venv/bin/activate
 
-# 2. Install frozen dependecies
+# 2. Install frozen dependencies
 pip install -r requirements.txt
 
 # 3. Start the API server
@@ -190,6 +216,19 @@ curl -X POST http://localhost:8000/query \
   ],
   "precision_at_k": 1.0
 }
+```
+
+### Example 6: Hybrid Evaluation Script
+Compare Dense-only vs. Hybrid retrieval Precision@k to validate the benefit of sparse fusion.
+```bash
+python scripts/eval_hybrid.py
+```
+**Example Output**:
+```
+[+] Query: 'ransomware attack lateral movement'
+    Dense-only  Precision@3: 0.33
+    Hybrid      Precision@3: 0.67
+    Improvement: +0.34
 ```
 
 ---
