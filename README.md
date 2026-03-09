@@ -1,5 +1,10 @@
 # ThreatLens: AI-Powered Threat Intelligence Assistant
 
+[![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-005571?style=flat&logo=fastapi)](https://fastapi.tiangolo.com)
+[![Endee DB](https://img.shields.io/badge/Vector_DB-Endee-orange.svg)](https://github.com/endee-io/endee)
+[![OpenAI](https://img.shields.io/badge/LLM-gpt--4o-green.svg)](https://openai.com/)
+
 <p align="center">
   <em>An advanced Retrieval-Augmented Generation (RAG) system built on the Endee Vector Database.</em>
 </p>
