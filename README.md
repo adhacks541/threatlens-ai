@@ -238,6 +238,48 @@ python scripts/eval_hybrid.py
 
 ---
 
+## ⚙️ Configuration Reference
+
+All settings are loaded from the `.env` file via Pydantic. Copy `.env.example` to `.env` and fill in the required values.
+
+| Variable | Default | Description |
+|---|---|---|
+| `PROJECT_NAME` | `ThreatLens AI` | Display name of the service |
+| `ENDEE_URL` | `http://localhost:8080` | URL of the running Endee vector DB |
+| `ENDEE_COLLECTION_NAME` | `threat_intel` | Endee index/collection name |
+| `ENDEE_AUTH_TOKEN` | *(optional)* | Auth header token for Endee |
+| `OPENAI_API_KEY` | *(required)* | Your OpenAI API key |
+| `LLM_MODEL` | `gpt-4o` | OpenAI model to use for generation |
+| `EMBEDDING_MODEL` | `all-MiniLM-L6-v2` | SentenceTransformer model ID |
+| `EMBEDDING_DIMENSION` | `384` | Must match the embedding model output |
+| `DEFAULT_TOP_K` | `3` | Documents to retrieve per query |
+| `HYBRID_ALPHA` | `0.7` | Weight for dense (semantic) score |
+| `HYBRID_BETA` | `0.3` | Weight for sparse (BM25 keyword) score |
+
+---
+
+## 🧪 Testing
+
+### Run the pytest Suite
+Validates the `/query`, `/ingest`, and `/health` endpoints:
+```bash
+pytest tests/test_api.py -v
+```
+
+### Run the Hybrid Evaluation Script
+Compares Dense-only vs. Hybrid Precision@k across a set of benchmark queries:
+```bash
+python scripts/eval_hybrid.py
+```
+
+### Run the CLI Demo
+Send a quick query from the command line and pretty-print the response:
+```bash
+python scripts/demo_query.py
+```
+
+---
+
 ## 🔮 Future Improvements
 1. **Automated Feed Ingestion**: Connect the `/ingest` pipeline to MISP or STIX/TAXII servers via CRON jobs for live intelligence streaming.
 2. **Graph Vector Integration**: Connect threat actor profiles logically by marrying Endee vectors with a Graph database to trace attack origins visually.
