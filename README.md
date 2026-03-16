@@ -34,21 +34,28 @@ Cybersecurity teams are overwhelmed by the sheer volume of unstructured threat i
 ```mermaid
 graph TD;
     User((Security Analyst)) -->|POST /query| API(FastAPI Server)
-    
-    subgraph Data Ingestion
-        Data[(threat_data.json)] -->|POST /ingest| Ingest[Ingestion Script]
-        Ingest --> Embed[SentenceTransformer]
-        Embed --> Endee[(Endee Vector DB)]
+
+    subgraph Ingestion ["📥 Data Ingestion (POST /ingest)"]
+        Data[(threat_data.json)] --> Ingest[ingestion.py]
+        Ingest --> Embed[SentenceTransformer\nall-MiniLM-L6-v2]
+        Embed -->|384-dim vectors| Endee[(Endee Vector DB\nDense Index)]
+        Ingest -->|raw text| BM25Build[BM25 Index Builder\nrank-bm25]
+        BM25Build -->|bm25_index.pkl| BM25Store[(Local BM25\nSparse Index)]
     end
 
-    subgraph RAG Pipeline
-        API --> QueryEmbed[SentenceTransformer]
-        QueryEmbed -->|Query Vector + Filters| Endee
-        Endee -->|Search Results| Orchestrator[RAG Orchestrator]
-        Orchestrator -->|Context + Query| LLM{OpenAI gpt-4o}
-        LLM -->|Streamed response| API
+    subgraph RAG ["🔍 Query & RAG Pipeline (POST /query)"]
+        API --> QueryEmbed[SentenceTransformer\nQuery Embedding]
+        QueryEmbed -->|Dense Query Vector| Endee
+        API -->|Raw Query Tokens| BM25Store
+        Endee -->|Dense Scores| Fusion["⚖️ Score Fusion\nfinal = α·dense + β·bm25\nα=0.7, β=0.3"]
+        BM25Store -->|BM25 Scores| Fusion
+        Fusion -->|Top-K Ranked Docs| RAGOrch[rag.py\nToken Budgeting + Prompt]
+        RAGOrch -->|Context + Query| LLM{OpenAI gpt-4o}
+        LLM -->|Streaming / Blocking| API
     end
 ```
+
+> **Hybrid Score Fusion**: Both dense and sparse scores are independently Min-Max normalised to `[0.0, 1.0]` before fusion, preventing either index from dominating due to scale differences.
 
 ---
 
