@@ -18,9 +18,12 @@ ThreatLens is a production-ready Threat Intelligence Assistant designed to parse
 - **Metadata Filtering Support**: Native filtering based on threat category and severity natively supported by Endee API.
 - **Hybrid Search Architecture**: Natively merges Semantic dense vectors with Sparse keyword matching (BM25) via configurable alpha/beta min-max normalization.
 - **Precision@k Evaluation**: Built-in metric evaluation for retrieval effectiveness in `retrieval.py`.
-- **Latency Measurement Logging**: Application-level middleware for request benchmarking.
+- **Latency Measurement Logging**: Application-level middleware for request benchmarking; DB and LLM latencies are measured and logged separately for granular profiling.
 - **Streaming LLM Responses**: Real-time generation streams via Server-Sent Events (SSE) preventing UI blocking on large answers.
-- **Configurable Top-K & Token limits**: Intelligent default configurations protecting LLM Context blowing up.
+- **Configurable Top-K & Token Limits**: Intelligent default configurations protecting LLM Context blowing up.
+- **Resilience Engineering**: Automatic exponential backoff retries (`tenacity`) on all Endee and OpenAI calls, plus an `lru_cache` on query embeddings to prevent redundant model inference for repeated queries.
+- **Dominant Signal Logging**: Each retrieval response logs whether the top result was driven by the **Semantic** (dense) or **Keyword** (BM25 sparse) signal, giving instant observability into retrieval behaviour.
+- **Proprietary Format Fallback**: A custom binary parser handles Endee's FlatBuffer response format when JSON decoding fails, ensuring zero query failures due to encoding edge cases.
 
 ---
 
@@ -102,7 +105,13 @@ ThreatLens implements **Hybrid Retrieval** by maintaining a local `rank-bm25` sp
 `Final Score = (α * Dense Score) + (β * Sparse Score)`
 This allows the system to seamlessly understand *conceptual similarities* while still enforcing *hard keyword boundaries*, ensuring the LLM is fed the most precise threat intelligence possible. You can tune these weights in `app/config.py`.
 
-### 5. Scalability Discussion (Millions of Vectors)
+### 5. Resilience: Retries, Caching & Fallback Parsing
+Three layers of production resilience are built in:
+- **`tenacity` exponential backoff**: All Endee and OpenAI network calls are wrapped with up to 3 automatic retries with exponential wait (`2s → 10s`), handling transient network faults transparently.
+- **`lru_cache` on embeddings**: Repeated queries are served from an in-memory cache, avoiding redundant SentenceTransformer inference and cutting latency for hot queries.
+- **FlatBuffer fallback parser**: When Endee returns its proprietary binary FlatBuffer format instead of JSON, a regex-based fallback parser extracts document IDs from the raw bytes, ensuring zero retrieval failures due to encoding edge cases.
+
+### 6. Scalability Discussion (Millions of Vectors)
 If this system scales to **millions of threat vectors**, the architecture remains robust due to Endee's performance optimizations:
 - **Compute Optimization**: By leveraging Endee's custom build flags for `AVX-512` or `NEON` SIMD architectures, distance computation over millions of data points happens via vectorized operations in CPU cache.
 - **Asynchrony**: The current FastAPI architecture handles ingestion via asynchronous BackgroundTasks, preventing blocking calls on the main thread during heavy data ingest.
@@ -148,7 +157,7 @@ uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 
 ---
 
-## 🔍 Examples edge usage
+## 🔍 Example Usage
 
 ### Example 1: Ingest Threat Data
 Initiate a background task to embed the `data/sample_threat_data.json` file into Endee.
@@ -288,8 +297,8 @@ python scripts/demo_query.py
 ---
 
 ## 🔮 Future Improvements
-1. **Automated Feed Ingestion**: Connect the `/ingest` pipeline to MISP or STIX/TAXII servers via CRON jobs for live intelligence streaming.
-2. **Graph Vector Integration**: Connect threat actor profiles logically by marrying Endee vectors with a Graph database to trace attack origins visually.
+1. **Automated Feed Ingestion**: Connect the `/ingest` pipeline to MISP or STIX/TAXII servers via APScheduler for live, scheduled intelligence streaming — no manual curl required.
+2. **Graph Vector Integration**: Connect threat actor profiles logically by marrying Endee vectors with a Neo4j graph database to trace full attack chains visually (e.g., `APT29 → uses → Cobalt Strike → targets → Finance sector`).
 
 ---
 *Built as a production-grade RAG evaluation project on top of Endee.*
