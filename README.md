@@ -96,8 +96,10 @@ Endee serves as the foundational knowledge base for ThreatLens. During the inges
 ### 2. Why a Vector Database over a Relational DB?
 Relational databases (SQL) are optimized for structured data and exact-match keyword queries (BM25/Full-text). However, threat intelligence queries are often semantic. A user might search for "financial motivation cyber attacks," while the document explicitly mentions "ransomware cartel." A vector database like Endee evaluates the mathematical distance between meaning representations (embeddings). It finds concepts that are conceptually similar regardless of the exact terminology used, which is critical in an ever-evolving cybersecurity landscape.
 
-### 3. Why Cosine Similarity?
+### 3. Why Cosine Similarity & Float32 Precision?
 Cosine similarity measures the angle between two multi-dimensional vectors, ignoring their magnitude. For text embeddings, magnitude generally corresponds to the length of the string, which is highly variable in intel reports. Cosine similarity ensures we are measuring the similarity of the *topic and semantic intent* across the documents, independent of document length, resulting in vastly better context relevance.
+
+Additionally, during ingestion (`app/ingestion.py`), the index is explicitly created with `precision="float32"` instead of relying on Endee's default int8 quantization. This ensures zero loss of semantic resolution, which is vital when differentiating highly specific technical vocabulary.
 
 ### 4. Why We Need Hybrid Retrieval
 Pure vector search is incredible for conceptual similarity, but it routinely struggles with **exact keyword matching**—especially for highly specific technical identifiers like IP addresses, CVE serial numbers (`CVE-2021-44228`), or threat actor aliases.
