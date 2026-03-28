@@ -303,4 +303,4 @@ python scripts/demo_query.py
 2. **Graph Vector Integration**: Connect threat actor profiles logically by marrying Endee vectors with a Neo4j graph database to trace full attack chains visually (e.g., `APT29 → uses → Cobalt Strike → targets → Finance sector`).
 
 ---
-*Built as a production-grade RAG evaluation project on top of Endee.*
+*Built as a production-grade RAG evaluation project on top of Endee by Aditya Singh.*
