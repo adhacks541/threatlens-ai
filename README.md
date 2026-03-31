@@ -113,7 +113,10 @@ Three layers of production resilience are built in:
 - **`lru_cache` on embeddings**: Repeated queries are served from an in-memory cache, avoiding redundant SentenceTransformer inference and cutting latency for hot queries.
 - **FlatBuffer fallback parser**: When Endee returns its proprietary binary FlatBuffer format instead of JSON, a regex-based fallback parser extracts document IDs from the raw bytes, ensuring zero retrieval failures due to encoding edge cases.
 
-### 6. Scalability Discussion (Millions of Vectors)
+### 6. Dynamic Context Truncation (Token Budgeting)
+To reliably prevent LLM context window limits (`tiktoken` token limits) from being exceeded, ThreatLens iterates over retrieved documents sequentially by their hybrid rank. Once the sum of accumulated tokens reaches the strict `MAX_TOKEN_BUDGET` (e.g., 4000 tokens), evaluation breaks early. This approach explicitly guarantees that the highest-ranked intelligence always fits into the prompt without causing API failures.
+
+### 7. Scalability Discussion
 If this system scales to **millions of threat vectors**, the architecture remains robust due to Endee's performance optimizations:
 - **Compute Optimization**: By leveraging Endee's custom build flags for `AVX-512` or `NEON` SIMD architectures, distance computation over millions of data points happens via vectorized operations in CPU cache.
 - **Asynchrony**: The current FastAPI architecture handles ingestion via asynchronous BackgroundTasks, preventing blocking calls on the main thread during heavy data ingest.
